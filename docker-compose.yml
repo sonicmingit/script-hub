@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+  script-hub:
+    build: .
+    container_name: script-hub
+    restart: always
+    ports:
+      - "7524:7524"
+    volumes:
+      # 挂载本地数据目录到容器
+      # 确保主机上存在此文件夹
+      - ./data/scripts:/app/data/scripts
+    environment:
+      - ENV_USER=admin
+      - ENV_PASSWORD=change_me_please
+    # 可选: 如果你想通过 docker 进行开发，请取消注释以下内容
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    # command: npm run dev
