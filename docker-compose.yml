@@ -19,3 +19,10 @@ services:
     #   - .:/app
     #   - /app/node_modules
     # command: npm run dev
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16
