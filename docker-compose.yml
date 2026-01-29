@@ -19,3 +19,4 @@ services:
     #   - .:/app
     #   - /app/node_modules
     # command: npm run dev
+    network_mode: bridge

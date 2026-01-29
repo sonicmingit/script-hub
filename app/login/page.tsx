@@ -26,8 +26,8 @@ export default function LoginPage() {
             });
 
             if (res.ok) {
-                router.refresh(); // Refresh middleware state
-                router.push('/');
+                // Force hard reload to update middleware state
+                window.location.href = '/';
             } else {
                 setError(t('login.error'));
             }

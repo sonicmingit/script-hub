@@ -72,6 +72,8 @@ const translations: Translations = {
         'home.count': ' 个脚本可用',
         'home.empty.title': '暂无脚本',
         'home.empty.desc': '请将文件放入 data/scripts 目录',
+        'home.server_cmd_title': '服务器一键管理命令',
+        'home.server_cmd_desc': '在任意终端执行此命令，即可获取脚本列表并一键运行',
 
         // Script Card
         'card.copy': '复制命令',
