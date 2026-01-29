@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         cookieStore.set('auth_token', 'logged_in', {
             httpOnly: true,
             path: '/',
-            secure: process.env.NODE_ENV === 'production',
+            secure: false, // process.env.NODE_ENV === 'production', // Disable secure for HTTP support in self-hosted env
             maxAge: 60 * 60 * 24 * 7, // 1 week
         });
 
