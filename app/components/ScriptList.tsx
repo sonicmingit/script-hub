@@ -3,7 +3,7 @@
 import { ScriptCard } from "./ScriptCard";
 import { useLanguage } from "../context/LanguageContext";
 import { useEffect, useState } from "react";
-import { Copy, Check, Terminal } from "lucide-react";
+import { Copy, Check, Terminal, Download } from "lucide-react";
 
 interface ScriptListProps {
     selectedCategory?: string;
@@ -13,27 +13,31 @@ interface ScriptListProps {
 export function ScriptList({ selectedCategory, scripts }: ScriptListProps) {
     const { t } = useLanguage();
     const [serverCmd, setServerCmd] = useState('');
-    const [copied, setCopied] = useState(false);
+    const [saveCmd, setSaveCmd] = useState('');
+    const [copiedCmd, setCopiedCmd] = useState<'list' | 'save' | null>(null);
 
     useEffect(() => {
-        setServerCmd(`curl -sL ${window.location.origin}/script | bash`);
+        const origin = window.location.origin;
+        setServerCmd(`curl -sL ${origin}/script | bash`);
+        setSaveCmd(`curl -sL ${origin}/api/download -o scripts.zip && unzip -o scripts.zip`);
     }, []);
 
-    const handleCopy = () => {
-        if (!serverCmd) return;
+    const handleCopy = (text: string, type: 'list' | 'save') => {
+        if (!text) return;
 
-        // 尝试使用最新的 Clipboard API
+        const doCopy = () => {
+            setCopiedCmd(type);
+            setTimeout(() => setCopiedCmd(null), 2000);
+        };
+
         if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(serverCmd).then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            }).catch(() => fallbackCopy(serverCmd));
+            navigator.clipboard.writeText(text).then(doCopy).catch(() => fallbackCopy(text, doCopy));
         } else {
-            fallbackCopy(serverCmd);
+            fallbackCopy(text, doCopy);
         }
     };
 
-    const fallbackCopy = (text: string) => {
+    const fallbackCopy = (text: string, onSuccess: () => void) => {
         const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.position = "fixed";
@@ -43,8 +47,7 @@ export function ScriptList({ selectedCategory, scripts }: ScriptListProps) {
         textArea.select();
         try {
             document.execCommand('copy');
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            onSuccess();
         } catch (err) {
             console.error('Copy failed', err);
         }
@@ -60,24 +63,47 @@ export function ScriptList({ selectedCategory, scripts }: ScriptListProps) {
                         <Terminal size={120} />
                     </div>
 
-                    <div className="relative z-10">
-                        <h3 className="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2">
-                            <Terminal size={20} />
-                            {t('home.server_cmd_title')}
-                        </h3>
-                        <p className="text-gray-400 text-sm mb-4">
-                            {t('home.server_cmd_desc')}
-                        </p>
+                    <div className="relative z-10 space-y-5">
+                        {/* Command 1: List Scripts */}
+                        <div>
+                            <h3 className="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2">
+                                <Terminal size={20} />
+                                {t('home.server_cmd_title')}
+                            </h3>
+                            <p className="text-gray-400 text-sm mb-3">
+                                {t('home.server_cmd_desc')}
+                            </p>
+                            <div className="flex items-center gap-2 bg-black/50 p-3 rounded border border-gray-700 font-mono text-sm text-green-400 max-w-2xl">
+                                <span className="flex-1 truncate select-all">{serverCmd || 'Loading...'}</span>
+                                <button
+                                    onClick={() => handleCopy(serverCmd, 'list')}
+                                    className="text-gray-400 hover:text-white transition-colors p-1"
+                                    title={t('card.copy')}
+                                >
+                                    {copiedCmd === 'list' ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                                </button>
+                            </div>
+                        </div>
 
-                        <div className="flex items-center gap-2 bg-black/50 p-3 rounded border border-gray-700 font-mono text-sm text-green-400 max-w-2xl">
-                            <span className="flex-1 truncate select-all">{serverCmd || 'Loading...'}</span>
-                            <button
-                                onClick={handleCopy}
-                                className="text-gray-400 hover:text-white transition-colors p-1"
-                                title={t('card.copy')}
-                            >
-                                {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                            </button>
+                        {/* Command 2: Download Scripts */}
+                        <div>
+                            <h3 className="text-lg font-bold text-purple-400 mb-2 flex items-center gap-2">
+                                <Download size={20} />
+                                {t('home.save_cmd_title')}
+                            </h3>
+                            <p className="text-gray-400 text-sm mb-3">
+                                {t('home.save_cmd_desc')}
+                            </p>
+                            <div className="flex items-center gap-2 bg-black/50 p-3 rounded border border-gray-700 font-mono text-sm text-yellow-400 max-w-2xl">
+                                <span className="flex-1 truncate select-all">{saveCmd || 'Loading...'}</span>
+                                <button
+                                    onClick={() => handleCopy(saveCmd, 'save')}
+                                    className="text-gray-400 hover:text-white transition-colors p-1"
+                                    title={t('card.copy')}
+                                >
+                                    {copiedCmd === 'save' ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

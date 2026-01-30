@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Copy, Terminal, Check, Eye, Trash2 } from "lucide-react";
+import { FileText, Copy, Terminal, Check, Eye, Trash2, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import { ScriptViewerModal } from "./ScriptViewerModal";
@@ -18,7 +18,7 @@ interface ScriptCardProps {
 
 export function ScriptCard({ script }: { script: ScriptCardProps }) {
     const { t } = useLanguage();
-    const [copied, setCopied] = useState(false);
+    const [copiedType, setCopiedType] = useState<'run' | 'save' | null>(null);
     const [showModal, setShowModal] = useState(false);
 
     const [origin, setOrigin] = useState('');
@@ -38,43 +38,42 @@ export function ScriptCard({ script }: { script: ScriptCardProps }) {
         }
     };
 
-    const handleCopy = () => {
-        const cmd = getCopyCommand();
+    const getDownloadCommand = () => {
+        const url = `${origin}/api/raw/${script.path}`;
+        return `curl -sL ${url} -o ${script.name}`;
+    };
 
-        // 尝试使用最新的 Clipboard API
+    const handleCopy = (type: 'run' | 'save') => {
+        const cmd = type === 'run' ? getCopyCommand() : getDownloadCommand();
+
+        const onSuccess = () => {
+            setCopiedType(type);
+            setTimeout(() => setCopiedType(null), 2000);
+        };
+
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(cmd)
-                .then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                })
-                .catch(() => {
-                    fallbackCopyTextToClipboard(cmd);
-                });
+                .then(onSuccess)
+                .catch(() => fallbackCopyTextToClipboard(cmd, onSuccess));
         } else {
-            // 兼容非安全上下文 (HTTP) 或不支持 Clipboard API 的浏览器
-            fallbackCopyTextToClipboard(cmd);
+            fallbackCopyTextToClipboard(cmd, onSuccess);
         }
     };
 
-    const fallbackCopyTextToClipboard = (text: string) => {
+    const fallbackCopyTextToClipboard = (text: string, onSuccess: () => void) => {
         const textArea = document.createElement("textarea");
         textArea.value = text;
-
-        // 确保不可见但可操作
         textArea.style.position = "fixed";
         textArea.style.left = "-9999px";
         textArea.style.top = "0";
         document.body.appendChild(textArea);
-
         textArea.focus();
         textArea.select();
 
         try {
             const successful = document.execCommand('copy');
             if (successful) {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                onSuccess();
             }
         } catch (err) {
             console.error('Fallback copy failed', err);
@@ -82,9 +81,6 @@ export function ScriptCard({ script }: { script: ScriptCardProps }) {
 
         document.body.removeChild(textArea);
     };
-
-    // Actually useState initializer runs during render, window is not defined.
-    // Must use useEffect.
 
     const handleDelete = async () => {
         if (!confirm(`确定要删除脚本 "${script.name}" 吗?`)) return;
@@ -94,7 +90,7 @@ export function ScriptCard({ script }: { script: ScriptCardProps }) {
                 method: 'DELETE'
             });
             if (res.ok) {
-                window.location.reload(); // Simple reload for now
+                window.location.reload();
             } else {
                 alert('删除失败');
             }
@@ -114,7 +110,6 @@ export function ScriptCard({ script }: { script: ScriptCardProps }) {
                         <span className="text-xs text-gray-500 bg-gray-950 px-2 py-1 rounded border border-gray-800">
                             {script.extension}
                         </span>
-                        {/* Delete Button */}
                         <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(); }}
                             className="p-1.5 text-gray-600 hover:text-red-500 hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-all"
@@ -143,21 +138,31 @@ export function ScriptCard({ script }: { script: ScriptCardProps }) {
                     {getCopyCommand()}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-auto">
+                <div className="grid grid-cols-3 gap-2 mt-auto">
                     <button
                         onClick={() => setShowModal(true)}
-                        className="flex items-center justify-center gap-2 py-2 rounded-md bg-gray-800 hover:bg-gray-700 text-sm font-medium transition-colors text-blue-400 hover:text-white border border-gray-700 hover:border-gray-600"
+                        className="flex items-center justify-center gap-1.5 py-2 rounded-md bg-gray-800 hover:bg-gray-700 text-sm font-medium transition-colors text-blue-400 hover:text-white border border-gray-700 hover:border-gray-600"
                     >
-                        <Eye size={16} />
-                        查看代码
+                        <Eye size={14} />
+                        <span className="hidden sm:inline">查看</span>
                     </button>
                     <button
-                        onClick={handleCopy}
+                        onClick={() => handleCopy('run')}
                         disabled={!origin}
-                        className="flex items-center justify-center gap-2 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center gap-1.5 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="复制运行命令"
                     >
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                        {copied ? "已复制" : "复制命令"}
+                        {copiedType === 'run' ? <Check size={14} /> : <Copy size={14} />}
+                        <span className="hidden sm:inline">{copiedType === 'run' ? "已复制" : "运行"}</span>
+                    </button>
+                    <button
+                        onClick={() => handleCopy('save')}
+                        disabled={!origin}
+                        className="flex items-center justify-center gap-1.5 py-2 rounded-md bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="复制下载命令"
+                    >
+                        {copiedType === 'save' ? <Check size={14} /> : <Download size={14} />}
+                        <span className="hidden sm:inline">{copiedType === 'save' ? "已复制" : "下载"}</span>
                     </button>
                 </div>
             </div>

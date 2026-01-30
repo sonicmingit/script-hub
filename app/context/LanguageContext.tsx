@@ -74,6 +74,8 @@ const translations: Translations = {
         'home.empty.desc': '请将文件放入 data/scripts 目录',
         'home.server_cmd_title': '服务器一键管理命令',
         'home.server_cmd_desc': '在任意终端执行此命令，即可获取脚本列表并一键运行',
+        'home.save_cmd_title': '一键保存脚本到本地',
+        'home.save_cmd_desc': '下载仓库中所有脚本为 ZIP 压缩包并自动解压',
 
         // Script Card
         'card.copy': '复制命令',
